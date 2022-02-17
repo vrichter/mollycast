@@ -1,0 +1,52 @@
+version: "3"
+services:
+  jellyfin:
+    image: linuxserver/jellyfin
+    container_name: jellyfin
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Europe/London
+      - JELLYFIN_PublishedServerUrl=192.168.0.1
+    volumes:
+      - /mnt/mollycast/data/jellyfin/data:/config
+      - /mnt/mollycast/movies:/data/movies:ro
+      - /mnt/mollycast/series:/data/series:ro
+      - /mnt/mollycast/music:/data/music:ro
+    ports:
+      - 8096:8096
+      - 8920:8920 #optional
+      - 7359:7359/udp #optional
+      - 1900:1900/udp #optional
+    restart: unless-stopped
+  snapserver:
+    image: snapserver
+    build:
+      context: ./snapserver/
+    environment:
+      - PUID=1000
+      - PGID=1000
+    ports:
+      - 1704:1704
+      - 1705:1705
+      - 1780:1780
+    volumes:
+      - /mnt/mollycast/tmp:/tmp
+  mopidy:
+    image: mopidy
+    build:
+      context: ./mopidy/
+    depends_on:
+      - snapserver
+      - jellyfin
+    environment:
+      - PUID=1000
+      - PGID=1000
+    ports:
+      - 6600:6600
+      - 6680:6680
+    volumes:
+      - /mnt/mollycast/data/mopidy:/mopidy
+      - /mnt/mollycast/music:/media/music:ro
+      - /mnt/mollycast/tmp/:/snapvol
+    command: /entrypoint.sh
